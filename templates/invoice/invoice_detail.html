@@ -1,0 +1,308 @@
+{% extends 'invoice/base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load humanize %}
+
+{% block extra_head %}
+	<style type="text/css">
+	   .status-label{
+	       vertical-align:top;
+	       line-height:30px;
+	   }
+	   .long-field{
+           width:53%;
+       }
+	</style>
+{% endblock %}
+
+{% block head_title %}{% trans action|title %} {% trans "Edit Invoice" %}{% endblock %}
+{% block page-title %}{% trans action|title %} {% trans "Edit Invoice"  %}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+     {% if invoice.cost_center %}
+        <li class="{% current 'invoice:list_invoices' %}"><a href="{% url 'invoice:list_invoices_by_costcenter' invoice.cost_center.id %}">{{ invoice.cost_center.name }} Invoices</a></li>
+    {% else %}
+    <li class="{% current 'invoice:list_invoices' %}"><a href="{% url 'invoice:list_invoices' %}">Overview</a></li>
+    {% endif %}
+    <li class="{% current 'invoice:view_invoice' invoice_id=invoice.id %}"><a href="{% url 'invoice:view_invoice' invoice.id %}">Edit Invoice</a></li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <div class="col-md-12">
+        <div class="col-md-4">
+	        <h3 style='display:inline;'><strong>Invoice {{ invoice.invoice_number }} </strong></h3>
+	            <h5 style='display:inline;'>
+	           {% if invoice.cancelled %}
+                <span class="label label-default status-label">Cancelled</span>
+	           {% elif invoice.get_status.status == 'Overdue' %}
+	            <span class="label label-danger status-label">{{ invoice.get_status.status }}</span>
+	           {% elif invoice.get_status.status == 'Sent' %}
+	            <span class="label label-info status-label">{{ invoice.get_status.status }}</span>
+	           {% elif invoice.get_status.status == 'Paid' and invoice.get_status.remark %}
+	            <span class="label label-success status-label">{{ invoice.get_status.status }}</span>
+	           {% elif invoice.get_status.status == 'Paid' and not invoice.get_status.remark %}
+	            <span class="label label-success status-label">{{ invoice.get_status.status }}</span>
+	           {% else %}
+	            <span class="pull-left"> Status Unknown</span>
+	           {% endif %}
+	           </h5>
+	        <p>
+	        {% if invoice.modified_by %}
+	           <sup><strong>Last activity:</strong> Updated by <strong>{{ invoice.modified_by }}</strong> on {{ invoice.modified }}</sup>
+	        {% else %}
+	           <sup><strong>Last activity:</strong> Created by <strong>{{ invoice.created_by }}</strong> on {{ invoice.created }}</sup>
+	        {% endif %}
+	        </p>
+        </div>
+        {% if invoice.cancelled %}
+        <div class='col-md-2'>
+            <h1 style='display:inline;'><font color='red'>CANCELLED</font></h1>
+        </div>
+        {% endif %}
+    </div>
+    
+ 
+<form class="modal-body" id='invoice_form' method="POST" action="{% url 'invoice:view_invoice' invoice.id %}">
+                    {% csrf_token %}
+        
+ <div class="col-sm-9 col-md-10">  
+     <div class="widget">
+         <div class="widget-title">
+             <h4>Invoice</h4>
+             <span class="tools">
+                 <a class="glyphicon glyphicon-chevron-up collapse-widget"></a>
+             </span>
+         </div>
+              <div class="widget-body">
+                {% if invoiceform.non_field_errors %}
+                   {% for err in invoiceform.non_field_errors %}
+                     <div class="alert alert-danger" role="alert">{{ err }}</div>
+                   {% endfor %}
+                {% endif %}
+
+                {% if invoiceform.errors %}
+                  <div class="alert alert-danger" role='alert'>
+                    {% for field in invoiceform %}
+                        {% for err in field.errors %}
+                          <p style='font-size:12px;color:#a94442;'>{{ err }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+              {% for hidden in invoiceform.hidden_fields %}
+                     {{ hidden }}
+                 {% endfor %}
+                 <table class="table-hover table-condensed">
+                     <tr>
+                         <th class='col-md-1 text-left'>Client</th>
+                         <td class="text-left long-field"><strong>{{ invoice.company }}</strong>
+                         <th class='text-right'>Balance Due</th>
+                         <td><strong>P&nbsp;{{ balance|default:"0.0"|intcomma }}</strong></td>
+                         </td>
+                         
+                     </tr>
+                     
+                     <tr>
+                         <th class="text-left" style="vertical-align:top;">Cost Center</th>
+                         <td class="text-left" colspan="10">{{ invoiceform.cost_center|addcss:'form-control'}}</td>
+
+                     </tr>
+                     <tr>
+                         <th class="text-left">Display Name</th>
+                         <td class="text-right {% if invoiceform.client_display.errors %}has-error{% endif %} long-field">{{ invoiceform.client_display|addcss:"form-control" }}</td>
+                         
+                         <th class="text-right" colspan="1">Purchase Order</th>
+                         <td class="text-right {% if invoiceform.purchase_order.errors %}has-error{% endif %}">{{ invoiceform.purchase_order|addcss:"form-control" }}</td>
+                     </tr>
+                      <tr>
+                         <th class="text-left">Address</th>
+                         <td class="text-right {% if invoiceform.address.errors %}has-error{% endif %}">{{ invoiceform.address|addcss:'form-control' }}</td>
+                         
+                         <th class="text-right">Invoice Number</th>
+                         <td class="text-right {% if invoiceform.invoice_number.errors %}has-error{% endif %}">{{ invoiceform.invoice_number|addcss:'form-control' }}</td>
+                         
+                         
+                     </tr>
+                     <tr>
+                         <th class="text-left">Business Style</th>
+                         <td class="text-right {% if invoiceform.business_style.errors %}has-error{% endif %}">{{ invoiceform.business_style|addcss:'form-control' }}</td>
+                         
+                         <th class="text-right">Issue Date</th>
+                         <td class="text-right {% if invoiceform.date.errors %}has-error{% endif %}">{{ invoiceform.date|addcss:'form-control datetimepicker' }}</td>
+                     </tr>
+                     <tr>
+                         <th class="text-left">Attention</th>
+                         <td class="text-right {% if invoiceform.client_contact.errors %}has-error{% endif %}">{{ invoiceform.client_contact|addcss:'form-control' }}</td>
+                         
+                         <th class="text-right">Due Date</th>
+                         <td class="text-right {% if invoiceform.due_date.errors %}has-error{% endif %}">{{ invoiceform.due_date|addcss:'form-control datetimepicker' }}</td>
+                     </tr>
+                     <tr>
+                         <th class="text-left">Payroll Period</th>
+                         <td class="text-right {% if invoiceform.period.errors %}has-error{% endif %}">{{ invoiceform.period|addcss:'form-control' }}</td>
+                         <th class="text-right">Start Date</th>
+                         <td class="text-right {% if invoiceform.start_date.errors %}has-error{% endif %}">{{ invoiceform.start_date|addcss:'form-control datetimepicker' }}</td>
+                                       
+                     </tr>
+                     <tr>
+                        <th class="text-left">Total Manhours Billed</th>
+                        <td class='text-left {% if invoiceform.total_manhours.errors %}has-error{% endif %}'>{{ invoiceform.total_manhours|addcss:'form-control' }}</td>
+                        <th class="text-right">End Date</th>
+                        <td class="text-right {% if invoiceform.end_date.errors %}has-error{% endif %}">{{ invoiceform.end_date|addcss:'form-control datetimepicker' }}</td>              
+                     </tr>
+                  </table>
+                  
+             </div>
+         </div>
+     </div> 
+            
+     <div class='col-sm-3 col-md-2'>
+        <table class="table-condensed">
+            <thead><tr><th>Actions</th></tr></thead>
+            <tbody>
+            <tr><td><a data-form="{% url 'invoice:create_payment' invoice.id %}" href="#" data-toggle="modal" class="makePaymentModal btn btn-success form-control">
+	                                 <span class="glyphicon glyphicon-plus"></span> Add Payment</a></td></tr>
+	         <tr><td><a data-form="{% url 'invoice:payment_history' invoice.id %}" href="#" data-toggle="modal" class="paymentHistoryModal btn btn-info form-control">
+	                                 Payment History</a></td></tr>
+	         <tr><td><a href="{% url 'invoice:duplicate_invoice' invoice.id %}" class="btn btn-warning form-control">
+	                                 <span class="glyphicon glyphicon-duplicate"></span> Duplicate Invoice</a></td></tr>
+	         <tr><td><a data-href="{% url 'invoice:delete_invoice' invoice.id %}" data-target="#confirmDelete" class="btn btn-danger form-control" data-toggle="modal" >
+	                                  Delete Invoice</a></td></tr>
+	         {% if not invoice.cancelled %}
+	         <tr><td><a data-href="{% url 'invoice:cancel_invoice' invoice.id %}" data-target="#cancelInvoiceModal" class="btn btn-default form-control" data-toggle="modal" >
+                                      <span class="glyphicon glyphicon-remove"></span> Cancel Invoice</a></td></tr>
+             
+             <tr><td><a href="{% url 'invoice:print_invoice' invoice.id %}" target="_blank" class="btn btn-primary form-control">
+                                      <span class="glyphicon glyphicon-print"></span> Print Preview</a></td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-12"> 
+       <div class="widget">
+                <div class="widget-title">
+                    <h4>Invoice Items</h4>
+                    <span class="tools">
+                        <a class="glyphicon glyphicon-chevron-up collapse-widget"></a>
+                    </span>
+                </div>
+                <div class="widget-body">
+                    <table class="table-hover table-condensed">
+                    <thead>
+                    {{ formset.management_form }}
+                    {% for form in formset %}
+                        {% if forloop.first %}
+                            {% for field in form.visible_fields %}
+                                {% if field.label == 'Description' %}
+                                    <th class='col-md-4'>{{ field.label }}</th>
+                                {% elif field.label == 'Type' %}
+                                    <th class='col-md-2'>{{ field.label }}</th>
+                                {% else %}
+                                    {% if field.label != 'Delete' %}
+                                        <th>{{ field.label }}</th>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </thead>
+                    <tbody id='items'>  
+				    {% for hidden in form.hidden_fields %}
+				        {{ hidden }}
+				    {% endfor %}    
+                     <tr id="{{ form.prefix }}-row" class="dynamic-form">
+                         {% for field in form.visible_fields %}
+                             <td class="{% if field.errors %}has-error{% endif %}">{{ field|addcss:'form-control' }}</td>
+                              {% if field.errors %}
+                               <div class="alert alert-danger" role="alert">{{ field.errors }}</div>
+                           {% endif %}
+                         {% endfor %}
+                         <td>
+		                    <a id="{{ form.prefix }}" href="javascript:void(0)" class="delete-row"><span class="glyphicon glyphicon-remove small"></span></a>
+		                </td>
+                     </tr>
+                 {% endfor %}
+                    </tbody>
+                    <tr class="text-left">
+                        <td><input type="button" value="Add Row" id="add_form" class="btn btn-sm btn-default"/></td>
+                    </tr>
+                </table>
+                <div class='row'>
+                   
+                   <div class="col-md-offset-9 col-sm-offset-8 col-md-1 col-sm-1 text-right"><h5><strong>TOTAL</strong></h5></div>
+		           <div class="col-md-2 col-sm-3"><input class="form-control text-right" type="number" id="total_amount" name="total_amount" step="0.01" readonly/></div>
+                </div>
+        </div>
+    </div>
+	    <div class="row">
+		    <div class="col-md-offset-9 col-sm-offset-9">
+		        <a type="button" href='{% url "invoice:select_client" %}' style="width:40%;" class="btn btn-default">Back</a>
+		        <button type="submit" style="width:55%;" class="btn btn-success pull-right">Save</button>
+		    </div>
+		</div>
+    </div>
+</form>     
+
+ 
+  <!--modals to view payment history and make payment -->
+    <div class="modal fade" id="paymentHistoryModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    </div>
+   <div class="modal fade" id="makePaymentModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"></div>
+        
+ {% include "invoice/includes/cancel_invoice.html" %}
+ 
+<script>
+    $(".datetimepicker").datepicker({dateFormat: "yy-mm-dd"});
+</script>
+
+
+{% endblock %}
+
+
+{% block javascript %}
+ {{ block.super }}
+ 
+<script type="text/javascript">
+    $(".paymentHistoryModal").on('click', function(event){
+        var button = $(event.relatedTarget);
+        var url = $(this).data("form");
+        $('#paymentHistoryModal').load(url, function() {
+            $(this).modal('show');
+    });
+        return false;
+    });
+
+    $(".close-modal").on('click', function(){
+        $('.modal').modal('hide');
+    });
+
+</script>
+
+<script type="text/javascript">
+    $(".makePaymentModal").on('click', function(event){
+        var button = $(event.relatedTarget);
+        var url = $(this).data("form");
+        $('#makePaymentModal').load(url, function() {
+            $(this).modal('show');
+    });
+        return false;
+    });
+
+    $(".close-modal").on('click', function(){
+        $('.modal').modal('hide');
+    });
+
+</script>
+
+<script>
+            //a modal to confirm delete 
+            $('#cancelInvoiceModal').on('show.bs.modal', function(confirm) {
+            $(this).find('form').attr('action', $(confirm.relatedTarget).data('href'));
+            });
+        </script>
+{% endblock %}

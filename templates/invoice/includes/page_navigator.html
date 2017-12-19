@@ -1,0 +1,18 @@
+<ul class='pagination'>
+    {% if page.has_previous and status %}
+    <li class="page-item"><a href="?status={{ status }}&page={{ page.previous_page_number }}">&laquo; previous</a></li>
+    {% elif page.has_previous and search_string %}
+    <li class="page-item"><a href="?search_term={{ search_string }}&page={{ page.previous_page_number }}">&laquo; previous</a></li>
+    {% elif page.has_previous %}
+	<li class="page-item"><a href="?page={{ page.previous_page_number }}">&laquo; previous</a></li>
+    {% endif %}
+	
+	<li class="page-item"><a class="page-link" href='#'>{{ page.number }}</a></li>
+    {% if page.has_next and status %}
+    <li class="page-item"><a href="?status={{ status }}&page={{ page.next_page_number }}">next &raquo;</a></li>
+    {% elif page.has_next and search_string %}
+    <li class="page-item"><a href="?search_term={{ search_string }}&page={{ page.next_page_number }}">next &raquo;</a></li>
+    {% elif page.has_next %}
+	<li class="page-item"><a href="?page={{ page.next_page_number }}">next &raquo;</a></li>
+    {% endif %}
+</ul>

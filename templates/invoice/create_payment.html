@@ -1,0 +1,29 @@
+{% load core_extras %}
+
+    <div class="modal-dialog">
+        <div class="modal-content col-sm-9">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel">Add Payment</h4>
+          </div>
+
+              <form class="modal-body" method="POST" action="{% url 'invoice:create_payment' invoice.id %}">
+                    {% csrf_token %}
+                    {% for item in form %}
+                        {% if field.errors %}
+                            <div class="alert alert-danger" role="alert">{{ field.errors }}</div>
+                        {% endif %}
+                               {{ item.label_tag }}
+                               {{ item|addcss:"form-control" }}
+
+                    {% endfor %}
+                    <br/>
+                 <div class="pull-right">
+                    <button class="btn btn-default" data-dismiss="modal" type="button">Close</button>
+                    <button class="btn btn-success close-modal" type="submit">Save</button>
+                 </div>
+            </form>
+            <br/><br/>
+          </div>
+          
+        </div>

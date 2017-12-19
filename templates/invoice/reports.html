@@ -1,0 +1,27 @@
+{% extends 'invoice/base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load humanize %}
+
+{% block head_title %}{% trans action|title %} {% trans "Reports" %}{% endblock %}
+{% block page-title %}{% trans action|title %} {% trans "Reports"  %}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li class="{% current 'invoice:reports' %}"><a href="{% url 'invoice:reports' %}">Billing - Reports</a></li>
+{% endblock %}
+
+{% block content %}
+   {{ block.super }}
+   <div class='col-md-4'>
+	   <div class='col-md-12'>
+	       <a href="{% url 'invoice:sales_report' %}" class='btn btn-lg btn-default' style='width:100%;'>Sales Report</a><br/><br/>
+	   </div>
+	   <div class='col-md-12'>
+	       <a href="{% url 'invoice:accounts_receivable' %}" class='btn btn-lg btn-default' style='width:100%;'>Accounts Receivable</a>
+	   </div>
+   </div>
+{% endblock %}

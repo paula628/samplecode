@@ -1,0 +1,69 @@
+{% load core_extras %}
+
+<div class="modal-dialog">
+<div class="modal-content col-sm-10">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">Add Pay Level</h4>
+    </div><br/>
+    <div class="col-sm-12">
+        {% if pay_levels %}
+        {% for lev in pay_levels %}
+        <div class="col-sm-12" style="display:block;">
+           <p><input type="checkbox" name="remaining_pay_level" id="lev_{{ lev.pk }}" value='{{ lev.pk }}' style='float:left;cursor:pointer;margin-right:18px;'/>
+           <label for="lev_{{ lev.pk }}" style="display:block;margin-left:28px;font-weight:normal;cursor:pointer;">{{lev }}</label></p>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p>There are no remaining pay levels to add to this invoice.</p>
+        {% endif %}
+    </div>
+    <div class="text-right">
+           <button class="btn btn-default" data-dismiss="modal" type="button">Close</button>
+           {% if pay_levels %}
+           <button class="btn btn-success close-modal" id="confirm_add" type="submit">&nbsp;Add&nbsp;</button>
+            {% endif %} 
+    </div><br/>
+</div>    
+</div>
+
+
+<script type="text/javascript">
+//Add detachments to the invoice
+    $(document).ready(function(){
+            $('#confirm_add').click(function(){
+                var checkboxes = document.getElementsByName('remaining_pay_level');
+                for (var i=0; i<checkboxes.length; i++) {
+                   if (checkboxes[i].checked) {
+                       //appends detachment to hidden detachment field
+                       var input = document.createElement("input");
+                       input.type = "hidden";
+                       input.name = "pay_levels";
+                       pay_level_id = checkboxes[i].value
+                       input.value = pay_level_id
+                       form=document.getElementById('invoice_form')
+                       form.appendChild(input);
+                       
+                       //append detachment with checkbox to ul
+                       label_id = checkboxes[i].id
+                       var label = $('label[for="'+ label_id +'"]').text();
+                       var ul = document.getElementById('pay_levels_list');
+                       var li = document.createElement('li');
+                       li.setAttribute("id","li_lev_"+pay_level_id);
+                       li.appendChild(document.createTextNode(label));
+                       var button = document.createElement("button");
+                       button.setAttribute("id","lev_"+pay_level_id);
+                       button.innerHTML = '<span class="glyphicon glyphicon-remove small"></span>'
+                       button.setAttribute("value",pay_level_id);
+                       button.setAttribute("class","removeLevel btn btn-link btn-xs");
+                       button.setAttribute("type", "button");
+                       li.appendChild(button);
+                       ul.appendChild(li);
+                       }
+                   }
+                $('#addDetachmentModal').modal('hide');  
+                check_pay_levels();
+                });
+            });
+</script>
+

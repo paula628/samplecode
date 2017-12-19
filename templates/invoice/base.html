@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load invoice_tags %}
+
+{% block extra_head %}
+{% endblock %}
+
+{% block content %}
+
+<div class="row breadcrumbs">
+    <div class="row">
+        <div class="col-md-12">
+            <ol class="breadcrumb">
+                <li class="{% current 'dashboard:dashboard' %}"><a href="{% url 'dashboard:dashboard' %}">Dashboard</a></li>
+
+                {% block breadcrumbs %}{% endblock %}
+            </ol>
+        </div><!--/.col-md-12 -->
+    </div><!--/.row -->
+</div><!--/.row -->
+
+<div class="row page-title">
+    <div class="col-md-12">
+        <form class="form-inline search-form" action="" method="GET" role="form">
+            <div class="form-group">
+                <input type="text" class="form-control" id="searchString" name="search_string" placeholder="Search" />
+            </div>
+            <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span></button>
+        </form>
+
+        <h2 class="title">{% block page-title %}{% endblock %}</h2>
+    </div><!--/.col-md-12 -->
+</div><!--/.row -->
+    
+<!--modal to confirm removal of pay level from invoice-->
+<div class="modal fade" id="removePayLevelModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">Removal Confirmation</h4>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to remove this pay level?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">No</button>
+        <button href="#" class="btn btn-danger danger" type="button" id='confirm_remove'>Yes</button>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+ <div class="modal fade" id="addDetachmentModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    </div>
+
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+//Shows the add pay level modal with remaining detachments
+    $(document).ready(function(){
+        $(".addLevel").on("click", function(){
+            var selected = []
+            $("input[name=pay_levels]").each(function(){ 
+            		selected.push($(this).val());
+            	});
+            $.ajax({
+		        url : "{% url 'invoice:add_pay_level' %}",
+		        type : "GET",
+		        data : {
+                    pay_levels :selected,
+                    invoice_id:'{{invoice.id}}',
+                    company_id:'{{company.id}}',
+                    period_id:'{{period.id}}'
+                },
+		        success : function(data) {
+		        	console.log('success')
+		        	$('#addDetachmentModal').modal('show');
+		        	$('#addDetachmentModal').html(data);
+		        	
+		        },
+		        error : function(response) {
+                    console.log(response.statusText);
+		        }
+		    });
+           return false
+        });
+    });
+</script>
+
+
+<script type="text/javascript">
+//Delete pay level from the invoice
+    $(document).ready(function(){
+        $(".pay_levels_list").on('click', '.removeLevel', function(){
+        	var pay_level_id = $(this).val();
+        	$('#confirm_remove').attr('data-pay_level_id', pay_level_id);
+            $("#removePayLevelModal").modal("show");
+        });
+        
+        $('#confirm_remove').click(function(){
+            var pay_level_id = $(this).attr('data-pay_level_id');
+            remove(pay_level_id);
+        });
+        
+        function remove(pay_level_id){
+            $("input[name=pay_levels][type=hidden][value='"+pay_level_id+"']").remove(); // remove hidden field
+            $('#li_lev_'+pay_level_id).remove(); //remove visible text and button
+            $('#removePayLevelModal').modal('hide');
+            check_pay_levels();
+
+        }
+        
+    });
+</script>
+
+<script type="text/javascript">
+//Check pay levels
+    $(document).ready(function(){
+    	check_pay_levels();
+        
+    });
+    
+    function check_pay_levels() {
+    	var old_div = document.getElementsByName("invoiceExists");
+        if (old_div){
+            $(old_div).remove();
+        }
+    	var levels_list = document.getElementById('pay_levels_list')
+        var period = $('#id_period').val()
+        var pay_levels = []
+        $("#pay_levels_list li button").each(function() {
+            pay_levels.push($(this).val());
+        });
+        $.ajax({
+            type: "GET",
+            url: "{% url 'invoice:check_pay_levels' %}",
+            data: {'period' : period, 'pay_levels': pay_levels, 'invoice': '{{ invoice.id }}'},
+            dataType: "text",
+            success: function(data){
+                var msg = JSON.parse(data)
+                if(!$.trim(msg)){
+                    console.log('no duplicate invoices found')
+                }else{
+                    var new_div = $('<div name="invoiceExists" class="alert alert-warning" role="alert"></div>').insertBefore(levels_list);
+                    $(new_div).append(msg); 
+                   
+                }
+            },
+            error: function (rs, e) {
+                console.log('Error checking pay levels');
+            }   
+        });
+
+    	
+    	
+    	
+    }
+</script>
+
+<script type="text/javascript">
+// used in create_invoice and invoice_detail
+    $(function () {
+    	// Add invoice item
+        $('#add_form').click(function() {
+            return addForm(this, 'invoiceitem');
+        });
+    	// Delete invoice item
+        $('.delete-row').click(function() {
+            return deleteForm(this, 'form');
+        })
+    })
+    
+    function updateElementIndex(el, prefix, ndx) {
+        var id_regex = new RegExp('(' + prefix + '-\\d+)');
+        var replacement = prefix + '-' + ndx;
+        if ($(el).attr("for")) $(el).attr("for", $(el).attr("for").replace(id_regex, replacement));
+        if (el.id) el.id = el.id.replace(id_regex, replacement);
+        if (el.name) el.name = el.name.replace(id_regex, replacement);
+    }
+
+    function addForm(btn, prefix) {
+        var formCount = parseInt($('#id_' + prefix + '-TOTAL_FORMS').val());
+        var row = $('.dynamic-form:first').clone(true).get(0);
+        $(row).removeAttr('id').insertAfter($('.dynamic-form:last')).children('.hidden').removeClass('hidden');
+        $(row).children().not(':last').children().each(function() {
+            updateElementIndex(this, prefix, formCount);
+            $(this).val('');
+        });
+        $(row).find('.delete-row').click(function() {
+            deleteForm(this, prefix);
+        });
+        $('#id_' + prefix + '-TOTAL_FORMS').val(formCount + 1);
+        compute_forms();
+        return false;
+    }
+
+    function deleteForm(btn, prefix) {
+    	//remove amount value of deleted row to recompute and show correct total amount
+    	($(btn).parents('.dynamic-form').find('#id_' + $(btn).attr('id') + '-amount')).val(0);
+        $(btn).parents('.dynamic-form').hide();
+        $('#id_' + $(btn).attr('id') + '-DELETE').prop('checked', true);
+        var forms = $('.dynamic-form');
+        $('#id_' + prefix + '-TOTAL_FORMS').val(forms.length);
+        for (var i=0, formCount=forms.length; i<formCount; i++) {
+            $(forms.get(i)).children().not(':last').children().each(function() {
+                updateElementIndex(this, prefix, i);
+            });
+        }
+        compute_amount();
+        return false;
+    }
+
+$(document).ready(function() {
+	//Methods to autocompute invoice items
+    compute_forms();
+    compute_amount();
+});
+
+//autocompute hours * rate = amount
+function compute_forms() {
+    var tbody = parseInt($('#id_invoiceitem-TOTAL_FORMS').val())
+    for(var i = 0; i < tbody; i++) {
+        $("#id_invoiceitem-" + i + '-hours').addClass('dynamic-hrs');
+        $("#id_invoiceitem-" + i + '-rate').addClass('dynamic-rate');
+        $("#id_invoiceitem-" + i + '-amount').addClass('dynamic-amount');
+        $("#id_invoiceitem-" + i + '-amount').addClass('text-right');
+        $("#id_invoiceitem-" + i + '-type').addClass('dynamic-type');
+        }
+    
+    $(".dynamic-hrs").each(function(index) {
+        var rate = document.getElementById("id_invoiceitem-" + index + '-rate');
+        var hours = document.getElementById("id_invoiceitem-" + index + '-hours');
+        if(hours){
+        	hours.addEventListener("change", function() {
+            if (rate.value && hours.value) {
+                var amt = parseFloat(rate.value * hours.value).toFixed(2);
+                $("#id_invoiceitem-" + index + '-amount').val(amt);
+                compute_amount();
+                }
+        	 });
+        	}         
+    }); 
+    
+    $(".dynamic-rate").each(function(index) {
+        var hours = document.getElementById("id_invoiceitem-" + index + '-hours');
+        var rate = document.getElementById("id_invoiceitem-" + index + '-rate');
+        if(rate){
+	        rate.addEventListener("change", function() {
+	            if (rate.value && hours.value) {
+	                var amt = parseFloat(rate.value * hours.value).toFixed(2);
+	                $("#id_invoiceitem-" + index + '-amount').val(amt);
+	                compute_amount();
+	            }
+	         });
+        }
+    }); 
+    
+    $(".dynamic-type").each(function(index) {
+        var rate = document.getElementById("id_invoiceitem-" + index + '-rate');
+        var hours = document.getElementById("id_invoiceitem-" + index + '-hours');
+        var type = document.getElementById("id_invoiceitem-" + index + '-type');
+        var amount = document.getElementById("id_invoiceitem-" + index + '-amount');
+        type.addEventListener("change", function() {
+            if (rate && hours && rate.value && hours.value) {
+                var amt = parseFloat(rate.value * hours.value).toFixed(2);
+                $("#id_invoiceitem-" + index + '-amount').val(amt);
+                compute_amount();
+            }
+            else if(amount) {
+                compute_amount();
+            }
+                    
+        });   
+    }); 
+    
+    $(".dynamic-amount").each(function(index) {
+        var amt = document.getElementById("id_invoiceitem-" + index + '-amount');
+        if(amt){
+        	amt.addEventListener("change", function() {
+            compute_amount();
+            
+            });
+        }
+    });    
+}
+
+// get total amount of each rate * hour
+function compute_amount() {
+    var total = 0.0;
+    $(".dynamic-amount").each(function(index) {
+          var amount = document.getElementById("id_invoiceitem-" + index + '-amount');
+          var type = document.getElementById("id_invoiceitem-" + index + '-type');
+          var add_types = {{ add_types|python_unicode_list_to_str_list|safe }};
+          var deduct_types = {{ deduct_types|python_unicode_list_to_str_list|safe }};
+          if(type.value != 'text'){
+              if ( $.inArray(type.value, deduct_types) > -1 ){
+                  if (amount && amount.value){ 
+                      total = parseFloat(total) -  parseFloat(amount.value);
+                      }
+              }
+              else if (amount.value || $.inArray(type.value, add_types) > -1){ 
+                  total = parseFloat(total) +  parseFloat(amount.value);
+                  }           
+          }
+    });
+    $('#total_amount').val(total.toFixed(2));
+    }
+</script>
+<script>
+$(document).ready(function() {
+    //hide delete checkboxes; but they're needed to mark deleted_rows
+    var forms = $('.dynamic-form');
+    for (var i=0, formCount=forms.length; i<formCount; i++) {
+    	$("#id_invoiceitem-" + i + '-DELETE').hide();
+        
+}
+
+});
+
+</script>
+
+{% endblock %}

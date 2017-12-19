@@ -1,0 +1,44 @@
+{% load core_extras %}
+{% load humanize %}
+
+<div class="modal-dialog">
+        <div class="modal-content col-sm-10">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel">Payment History</h4>
+          </div>
+             <table class="table table-hover table-condensed">
+             {% if payments %}
+                 <tr>
+	                  <th>Date</th>
+	                  <th class="text-right">Amount</th>
+	                  <th class="text-right">Created by</th>
+	                  <th></th>
+                </tr>
+                 {% for item in payments %}
+                 <tr>
+                      <td>{{ item.date }}</td>
+                      <td class="text-right">P&nbsp;{{ item.amount|intcomma }}</td>
+                      <td class="text-right">{{ item.created_by }}</td>
+                      <td>
+                         <a class="btn btn-danger btn-xs" data-href="{% url 'invoice:delete_payment' payment_id=item.id %}" data-target="#confirmDelete" data-toggle="modal">delete</a>
+                      </td>
+                 </tr>
+                 {% endfor %}
+                  <tr style="border-top:2px;border-top-style: solid; border-bottom: thin;">
+                      <td><strong>Total Paid</strong></td>
+                      <td class="text-right"><strong>P&nbsp;{{ total_paid|intcomma }}</strong></td>
+                      <td></td>
+                      <td></td>
+                 </tr>
+                 {% else %}
+                    <div class='col-md-6'><br/><p>No payments found.</p></div>
+                 {% endif %}
+             </table>
+           <div class="col-md-offset-10">
+              <button class="btn btn-default" data-dismiss="modal" type="button">Close</button>
+           </div>
+            <br/>
+          
+     </div>
+</div>

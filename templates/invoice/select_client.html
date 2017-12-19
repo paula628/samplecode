@@ -1,0 +1,98 @@
+{% extends 'invoice/base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load humanize %}
+
+{% block head_title %}{% trans action|title %} {% trans "Billing" %}{% endblock %}
+{% block page-title %}{% trans action|title %} {% trans "Select Client"  %}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li class="{% current 'invoice:select_client' %}"><a href="{% url 'invoice:select_client' %}">Select Client</a></li>
+{% endblock %}
+
+{% block content %}
+   {{ block.super }}
+
+    <div class='row'>
+        <div class="col-md-6">
+                <p>Select a company to retrieve its detachments and cost centers.</p>
+                <label>Client </label>
+                <select id="company" name="company" class="form-control form-inline" onChange='onchange_company()' style="width:100%;">
+                    <option value="" disabled selected>-----------</option>
+                    {% for company in companies %}
+                        <option value="{{ company.id }}" {% if selected_company_id == company.id %}selected{% endif %}>{{ company.full_name }}</option>
+                     {% endfor %}
+                </select>
+                <br />
+
+
+                {% if detachments %}
+                <p>If applicable, select a detachment.</p>
+                <label>Detachment </label>
+                    <select id="detachment" name="detachment" class="form-control form-inline" onChange='onchange_detachment()' style="width:100%;">
+                    <option value="" disabled selected>-----------</option>
+                    {% for detachment in detachments %}
+                        <option value="{{ detachment.id }}" {% if selected_detachment_id == detachment.id %}selected{% endif %}>{{ detachment.name }}</option>
+                     {% endfor %}
+                </select>
+                <br/>
+                {% endif %}
+
+                {% if costcenters_regular %}
+                    <br/>
+                    <p>Select a cost center to view its billing history.</p>
+                        <label>Cost Centers Regular</label>
+                        {% for center in costcenters_regular %}
+                        <form name='select' method='POST' action="{% url 'invoice:list_invoices_by_costcenter' center.id %}">
+                            {% csrf_token %}
+                            <input class='btn btn-lg btn-default col-md-8' name='costcenter' type='submit' value="{{ center.name }}"/>
+                            <br/><br/><br/>
+                        </form>
+                        {% endfor %}
+                {% endif %}
+
+                {% if costcenters_augmentation %}
+                        <label>Cost Centers Augmentation</label>
+                        {% for center in costcenters_augmentation %}
+                        <form name='select' method='POST' action="{% url 'invoice:list_invoices_by_costcenter' center.id %}">
+                            {% csrf_token %}
+                            <input class='btn btn-lg btn-default col-md-8' name='costcenter' type='submit' value="{{ center.name }}"/>
+                            <br/><br/><br/>
+                        </form>
+                        {% endfor %}
+                
+                {% endif %}
+            
+        </div>
+    </div>
+{% endblock %}
+
+ {% block javascript %}
+     
+    <script type="text/javascript">
+        function onchange_company() {
+        	var company = $("#company").val(); 
+            if (company) {
+            var url = '{% url "invoice:onchange_company" company=9999 %}';
+            url= url.replace('9999', company);
+            location.href = url;
+            }
+        }
+    </script>
+
+    <script type="text/javascript">
+        function onchange_detachment() {
+            var detachment = $("#detachment").val();
+            if (detachment) {
+            var url = '{% url "invoice:onchange_detachment" detachment=1111 %}';
+            url= url.replace('1111', detachment);
+            location.href = url;
+            }
+        }
+    </script>
+ 
+{% endblock %} 

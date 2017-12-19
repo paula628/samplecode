@@ -1,0 +1,145 @@
+{% extends 'invoice/base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load humanize %}
+{% load mathfilters %}
+
+{% block head_title %}{% trans action|title %} {% trans "Invoice Overview" %}{% endblock %}
+{% block page-title %}
+    {% trans action|title %} {% trans "Invoice Overview"  %}
+    {% if costcenter %}: {{ costcenter.name }}{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+    <style type="text/css">
+       body {
+           min-width:800px;
+       }
+       .ui-tooltip {
+           font-size:10px;
+           white-space: pre-line;
+       }
+       .with-tooltip {
+            cursor: pointer;
+       }
+    </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+   {{ block.super }}
+   {% if costcenter %}
+   <li class="{% current 'invoice:select_client' %}"><a href="{% url 'invoice:select_client' %}">Select Client</a></li>
+   <li class="{% current 'invoice:list_invoices' %}"><a href="{% url 'invoice:list_invoices_by_costcenter' costcenter.id %}">{{ costcenter.name }} Invoices</a></li>
+   {% else %}
+   <li class="{% current 'invoice:list_invoices' %}"><a href="{% url 'invoice:list_invoices' %}">Invoice Overview</a></li>
+   {% endif %}
+{% endblock %}
+
+{% block content %}
+   {{ block.super }}
+   
+<div class="row">
+        <div class="col-md-12">
+			<div class="col-sm-7">
+                 <form class="form-inline with-tooltip" id="search_invoice" method="GET" action="{% url 'invoice:search_invoice' %}">
+                   <input name="search_term" style="width:80%;display:inline;" type='text' class="form-control"
+                       title="Search by invoice number, company, detachment or pay level"
+                       value="{{ search_string }}"
+                       data-toggle="tooltip"
+                       placeholder="Enter invoice number, company, detachment or pay level"/>
+                   <input class='btn btn-success btn-sm' type="submit" value="Search" hidden/>
+                 </form>
+             </div>
+            <div class="col-sm-3">
+            {% if costcenter %}
+                <form class="form-inline" id="employee_status_form" action="{% url 'invoice:list_invoices_by_costcenter' costcenter.id %}">
+            {% else %}
+                <form class="form-inline" id="employee_status_form" action="{% url 'invoice:list_invoices' %}">
+            {% endif %}
+                    <label>Filter by Status&nbsp;&nbsp;</label>
+                    <select class="form-inline form-control" name="status" onchange="this.form.submit()">
+                        {% for state, status_display in statuses %}
+                            <option value="{{ state }}" {% if status == state %}selected{% endif %}>{{ status_display }}</option>
+                        {% endfor %}
+                    </select>
+                    <input class="form-control" type="submit" value="Submit" style="display:none;"/>
+                </form><br/>
+            </div>
+
+            {% if costcenter %}
+            <div class="col-sm-2">
+                <a type='button' class='btn btn-primary form-control' href='{% url "invoice:create_invoice" costcenter.id %}'>Create Invoice</a>
+            </div>
+            {% endif %}
+            
+            <div class="widget">
+                <div class="widget-title">
+                    <h4>List of Invoices</h4>
+                </div> 
+                <div class="widget-body">
+                    <table class='table table-hover table-bordered'>
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Invoice No.</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th>Issue Date</th>
+                                <th>Client</th>
+                                <th>Amount</th>
+                                <th>Balance Due</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        {% for invoice in page.object_list %}
+                         <tr>
+                            <td>{{ invoice.period.display }}</td>
+                            <td>{{ invoice.invoice_number }}</td>
+                            {% if invoice.cancelled %}
+                                <td><span class="label label-default">&nbsp;&nbsp;<strong>Cancelled</strong>&nbsp;&nbsp;</label></td>
+                                <td><span class="pull-left"></td>
+                            {% elif invoice.get_status.status == 'Overdue' %}
+	                            <td><span class="label label-danger"><strong>{{ invoice.get_status.status }}</strong></span></td>
+	                            <td><span class="pull-left" style='color:red;'>Due {{ invoice.get_status.remark }} day{{ invoice.get_status.remark|pluralize }} ago</span></td>
+                            {% elif invoice.get_status.status == 'Sent' %}
+                                <td><span class="label label-info">&nbsp;&nbsp;<strong>{{ invoice.get_status.status }}</strong>&nbsp;&nbsp;</label></td>
+                                <td><span class="pull-left">Due in {{ invoice.get_status.remark }} day{{ invoice.get_status.remark|pluralize }}</span></td>
+                            {% elif invoice.get_status.status == 'Paid' and invoice.get_status.remark %}
+                                <td><span class="label label-success">&nbsp;&nbsp;<strong>{{ invoice.get_status.status }}</strong>&nbsp;&nbsp;</span></td>
+                                <td><span class="pull-left">{{ invoice.get_status.remark }} day{{ invoice.get_status.remark|pluralize }} late</span></td>
+                            {% elif invoice.get_status.status == 'Paid' and not invoice.get_status.remark %}
+                                <td><span class="label label-success">&nbsp;&nbsp;<strong>{{ invoice.get_status.status }}</strong>&nbsp;&nbsp;</span></td>
+                                <td><span class="pull-left">-</span></td>
+                            {% else %}
+                                <td><span class="pull-left">-</span></td>
+                                <td><span class="pull-left">-</span></td>
+                            {% endif %}
+                            <td>{{ invoice.date }}</td>
+                            <td class="text-left"><strong>{{ invoice.company }}</strong></td>
+                            <td class="text-right">P {{ invoice.total_amount|default:"0.0"|intcomma }}</td>
+                            <td class="text-right">P {{ invoice.balance|default:"0.0"|intcomma }}</td>
+                              <td>
+                              <a href="{% url 'invoice:view_invoice' invoice.id %}" class="editWithdrawal btn btn-warning btn-xs" id="editInvoice_{{ invoice.id }}">view/edit</a>
+                                </td>
+                         </tr>
+                        {% endfor %}
+                    </table>
+                        
+                </div> 
+                <div class="pull-right">{% include 'invoice/includes/page_navigator.html' %}</div>
+            </div> 
+        </div>
+    </div>
+   
+{% endblock %}
+
+{% block javascript %}
+<script>
+
+    $('.with-tooltip').tooltip();
+    
+</script>
+{% endblock %}

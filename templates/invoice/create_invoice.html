@@ -1,0 +1,217 @@
+{% extends 'invoice/base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load humanize %}
+
+{% block extra_head %}
+    <style type="text/css">
+       .long-field{
+           width:55%;
+       }
+    </style>
+{% endblock %}
+
+{% block head_title %}{% trans action|title %}{{ title }}{% endblock %}
+{% block page-title %}{% trans action|title %} {{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    {% if invoice %}
+        <li class="{% current 'invoice:list_invoices' %}"><a href="{% url 'invoice:list_invoices' %}">Overview</a></li>
+        <li class="{% current 'invoice:duplicate_invoice' invoice_id=invoice.id %}">
+            <a href="{% url 'invoice:duplicate_invoice' invoice_id=invoice.id %}">Duplicate Invoice</a></li>
+    {% else %}
+        {% if costcenter %}
+        <li class="{% current 'invoice:select_client' %}"><a href="{% url 'invoice:select_client' %}">Select Client</a></li>
+        <li class="{% current 'invoice:list_invoices' %}"><a href="{% url 'invoice:list_invoices_by_costcenter' costcenter.id %}">{{ costcenter.name }} Invoices</a></li>
+        <li class="{% current 'invoice:create_invoice' costcenter.id %}">
+            <a href="{% url 'invoice:create_invoice' costcenter.id %}">Create Invoice</a></li>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+   {{ block.super }}
+   
+
+<div class="col-md-11">
+       {% if invoice %}
+           <form class="modal-body" id='invoice_form' method="POST" action="{% url 'invoice:duplicate_invoice' invoice.id %}">
+       {% else %}
+           <form class="modal-body" id='invoice_form' method="POST" action="{% url 'invoice:save_invoice' costcenter.id %}">
+       {% endif %}
+                   {% csrf_token %}
+           {{ formset.management_form }}
+
+           <div class="widget">
+               <div class="widget-title">
+                   <h4>Invoice</h4>
+                   <span class="tools">
+                       <a class="glyphicon glyphicon-chevron-up collapse-widget"></a>
+                   </span>
+               </div>
+                  <div class="widget-body">
+                  
+                  {% if invoiceform.non_field_errors %}
+          				    {% for err in invoiceform.non_field_errors %}
+          				      <div class="alert alert-danger" role="alert">{{ err }}</div><br/>
+          				    {% endfor %}
+          				{% endif %}
+
+                  {% if invoiceform.errors %}
+                  <div class="alert alert-danger" role='alert'>
+                    {% for field in invoiceform %}
+                        {% for err in field.errors %}
+                          <p style='font-size:12px;color:#a94442;'>{{ err }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                  {% for hidden in invoiceform.hidden_fields %}
+		                {{ hidden }}
+		              {% endfor %}
+                     <table class="table-hover table-condensed">
+                         <tr>
+                             <th class="col-md-1 text-left">Client</th>
+                             {% if invoice %}
+                                 <td class="text-left" colspan="10"><strong>{{ invoice.company }}</strong></td>
+                             {% else %}
+                                 <td class="text-left" colspan="10"><strong>{{ company }}</strong></td>
+                             {% endif %}
+                         </tr>
+                         
+                         <tr>
+                             <th class="text-left">Cost Center</th>
+                             <td class="text-left {% if invoiceform.cost_center.errors %}has-error{% endif %}">{{ invoiceform.cost_center|addcss:"form-control" }}</td>
+                         </tr>
+                     <tr>
+                         <th class="text-left">Display Name</th>
+                         <td class="text-right {% if invoiceform.client_display.errors %}has-error{% endif %} long-field">{{ invoiceform.client_display|addcss:"form-control" }}</td>
+                         
+                         <th class="text-right" >Purchase Order</th>
+                         <td class="text-right {% if invoiceform.purchase_order.errors %}has-error{% endif %}">{{ invoiceform.purchase_order|addcss:"form-control" }}</td>
+                     </tr>
+                      <tr>
+                         <th class="text-left">Address</th>
+                         <td class="text-right {% if invoiceform.address.errors %}has-error{% endif %}">{{ invoiceform.address|addcss:'form-control' }}</td>
+                         
+                         <th class="text-right">Invoice Number</th>
+                         <td class="text-right {% if invoiceform.invoice_number.errors %}has-error{% endif %}">{{ invoiceform.invoice_number|addcss:'form-control' }}</td>
+
+                         
+                         
+                     </tr>
+                     <tr>
+                         <th class="text-left">Business Style</th>
+                         <td class="text-right {% if invoiceform.business_style.errors %}has-error{% endif %}">{{ invoiceform.business_style|addcss:'form-control' }}</td>
+                         
+                         <th class="text-right">Issue Date</th>
+                         <td class="text-right {% if invoiceform.date.errors %}has-error{% endif %}">{{ invoiceform.date|addcss:'form-control datetimepicker' }}</td>
+                     </tr>
+                     <tr>
+                         <th class="text-left">Attention</th>
+                         <td class="text-right {% if invoiceform.client_contact.errors %}has-error{% endif %}">{{ invoiceform.client_contact|addcss:'form-control' }}</td>
+                         
+                         <th class="text-right">Due Date</th>
+                         <td class="text-right {% if invoiceform.due_date.errors %}has-error{% endif %}">{{ invoiceform.due_date|addcss:'form-control datetimepicker' }}</td>
+                     </tr>
+                     <tr>
+                         <th class="text-left">Payroll Period</th>
+                         <td class="text-right {% if invoiceform.period.errors %}has-error{% endif %}">{{ invoiceform.period|addcss:'form-control' }}</td>
+                         <th class="text-right">Start Date</th>
+                         <td class="text-right {% if invoiceform.start_date.errors %}has-error{% endif %}">{{ invoiceform.start_date|addcss:'form-control datetimepicker' }}</td>
+                     </tr>
+                     <tr>
+                        <th class="text-left">Total Manhours Billed</th>
+                        <td class='text-left {% if invoiceform.total_manhours.errors %}has-error{% endif %}'>{{ invoiceform.total_manhours|addcss:'form-control' }}</td>
+                        <th class="text-right" colspan='1'>End Date</th>
+                         <td class="text-right {% if invoiceform.end_date.errors %}has-error{% endif %}">{{ invoiceform.end_date|addcss:'form-control datetimepicker' }}</td>              
+                     </tr>
+                      </table>
+                 </div>
+             </div>
+          
+           
+           
+         <div class="widget">
+             <div class="widget-title">
+                 <h4>Invoice Items</h4>
+                 <span class="tools">
+                     <a class="glyphicon glyphicon-chevron-up collapse-widget"></a>
+                 </span>
+             </div>
+             <div class="widget-body">
+                <table class="table-hover table-condensed">
+			        {% for form in formset %}
+				        {% if form.non_field_errors %}
+				           {% for error in form.non_field_errors %}
+		                          <div class="alert alert-danger" role="alert">{{ error }}</div>
+		                          {% endfor %}
+		                      {% endif %}
+		                      <thead>
+			            {% if forloop.first %}
+			                {% for field in form.visible_fields %}
+			                    {% if field.label == 'Description' %}
+		                                 <th class='col-md-5'>{{ field.label }}</th>
+								{% elif field.label == 'Type' %}
+								    <th class='col-md-2'>{{ field.label }}</th>
+								{% else %}
+								    {% if field.label != 'Delete' %}
+								        <th>{{ field.label }}</th>
+								    {% endif %}
+								{% endif %}
+			                {% endfor %}
+			            {% endif %}
+			        </thead>
+			    <tbody id='items'>
+			            {% for hidden in form.hidden_fields %}
+		                       {{ hidden }}
+		                   {% endfor %} 
+			            <tr id="{{ form.prefix }}-row" class="dynamic-form">
+			                {% for field in form.visible_fields %}
+			                    <td class="{% if field.errors %}has-error{% endif %}">
+			                         {{ field|addcss:'form-control' }}</td>
+			                    {% if field.errors %}
+		                                   <div class="alert alert-danger" role="alert">{{ field.errors }}</div>
+		                               {% endif %}
+			                {% endfor %}
+			                 <td{% if forloop.first %} class="hidden"{% endif %}>
+	                            <a id="remove-{{ form.prefix }}-row" href="javascript:void(0)" class="delete-row">x</a>
+	                        </td>
+			            </tr>
+			        {% endfor %}
+			    </tbody>
+			    <tr class="text-left">
+		            <td><input type="button" value="Add Row" id="add_form" class="btn btn-sm btn-default"/></td>
+		        </tr>
+		  </table>
+		 <div class='row'>
+	            <div class="col-md-offset-9 col-sm-offset-8 col-md-1 col-sm-1 text-right"><h5><strong>TOTAL</strong></h5></div>
+	            <div class="col-md-2 col-sm-3"><input class="form-control text-right" type="number" id="total_amount" name="total_amount" step="0.01" readonly/></div>
+	     </div>
+		  </div>
+	  </div>
+	<div class="row">
+	   <div class="col-md-offset-9 col-sm-offset-9">
+	       <a type="button" href='{% url "invoice:select_client" %}' style="width:40%;" class="btn btn-default">Back</a>
+	       <button type="submit" style="width:55%;" class="btn btn-success pull-right">Save</button>
+	   </div>
+	</div>
+
+    </form>
+</div>
+<script>
+    $(".datetimepicker").datepicker({dateFormat: "yy-mm-dd"});
+</script>
+    
+{% endblock %}
+
+
+{% block javascript %}
+     {{ block.super }}
+
+{% endblock %}

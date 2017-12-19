@@ -1,0 +1,28 @@
+{% load core_extras %}
+
+
+<div class="modal fade" id="cancelInvoiceModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">Cancel Confirmation</h4>
+      </div>
+      <div class="modal-body">
+        Are you sure you want cancel this Invoice?
+      </div>
+      <div class="modal-footer">
+        <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">No</button>
+                        <button href="#" class="btn btn-danger danger" type="submit" id='confirm_cancel'>Yes</button>
+                    </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% block javascript %}
+{% endblock %}

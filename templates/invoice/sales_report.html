@@ -1,0 +1,42 @@
+{% extends 'invoice/base.html' %}
+
+{% load i18n %}
+{% load url from future %}
+{% load staticfiles %}
+{% load core_extras %}
+{% load humanize %}
+
+{% block head_title %}{% trans action|title %} {% trans "Sales Report" %}{% endblock %}
+{% block page-title %}{% trans action|title %} {% trans "Sales Report"  %}{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+     <li class="{% current 'invoice:reports' %}"><a href="{% url 'invoice:reports' %}">Billing - Reports</a></li>
+{% endblock %}
+
+{% block content %}
+   {{ block.super }}
+
+        <div class="col-md-4">
+            <form name='select_period' action="{% url 'invoice:sales_report' %}">
+                <p>Select a start period and an end period.</p>
+                <br/>
+                <label for='start_period'>Start Period</label>
+                <select required id="start_period" name="start_period" class="form-control form-inline">
+                    {% for period in period_codes %}
+                        <option value="{{ period.id }}" {% if selected_start == period.id %}selected{% endif %}>{{ period.display }}</option>
+                     {% endfor %}
+                </select>
+                <br />
+                <label for='end_period'>End Period</label>
+                <select required id="end_period" name="end_period" class="form-control form-inline">
+                    {% for period in period_codes %}
+                        <option value="{{ period.id }}" {% if selected_end == period.id %}selected{% endif %}>{{ period.display }}</option>
+                     {% endfor %}
+                </select>
+                <br/>
+                <input class="btn btn-success form-control" type="submit" value="Download">
+            </form>
+        </div>
+    
+{% endblock %}
